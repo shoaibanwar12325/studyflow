@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-theme="system">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- Content Security Policy: only our own scripts/styles; network calls limited to the two APIs. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com https://www.gov.uk; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <meta name="referrer" content="no-referrer">
+  <title>StudyFlow – Student Planner</title>
+  <meta name="description" content="StudyFlow is an offline-first student planner and task manager: deadlines, timetable, focus timer and weather – encrypted on your device.">
+  <meta name="theme-color" content="#3B4CCA" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#14172B" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <!-- iOS: Add to Home Screen support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="StudyFlow">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <script src="js/boot.js"></script>
+  <link rel="modulepreload" href="js/core.js">
+  <link rel="modulepreload" href="js/crypto.js">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div id="offline-banner" class="offline-banner" role="status" hidden>
+    <span class="offline-dot" aria-hidden="true"></span>
+    You're offline – everything still works and is saved on this device.
+  </div>
+
+  <div class="app-shell">
+    <nav id="tabbar" class="tabbar" aria-label="Main" hidden>
+      <a href="#/today" data-tab="today" class="tab"><span class="tab-ico" data-icon="today"></span><span class="tab-label">Today</span></a>
+      <a href="#/tasks" data-tab="tasks" class="tab"><span class="tab-ico" data-icon="tasks"></span><span class="tab-label">Tasks</span></a>
+      <a href="#/calendar" data-tab="calendar" class="tab"><span class="tab-ico" data-icon="calendar"></span><span class="tab-label">Week</span></a>
+      <a href="#/focus" data-tab="focus" class="tab"><span class="tab-ico" data-icon="focus"></span><span class="tab-label">Focus</span></a>
+      <a href="#/more" data-tab="more" class="tab"><span class="tab-ico" data-icon="more"></span><span class="tab-label">More</span></a>
+    </nav>
+
+    <main id="main" class="main" tabindex="-1">
+      <div class="boot-splash" aria-live="polite">
+        <img src="icons/icon-192.png" width="72" height="72" alt="">
+        <p>Loading StudyFlow…</p>
+      </div>
+    </main>
+
+    <a id="fab" class="fab" href="#/task/new" aria-label="Add task" hidden><span data-icon="plus"></span></a>
+  </div>
+
+  <div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="sr-announcer" class="visually-hidden" aria-live="assertive" aria-atomic="true"></div>
+
+  <dialog id="dialog" class="dialog" aria-labelledby="dialog-title"></dialog>
+
+  <input id="photo-input" type="file" accept="image/*" capture="environment" class="visually-hidden" tabindex="-1" aria-hidden="true">
+  <input id="import-input" type="file" accept="application/json,.json" class="visually-hidden" tabindex="-1" aria-hidden="true">
+
+  <noscript><p class="noscript">StudyFlow needs JavaScript enabled to run.</p></noscript>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
