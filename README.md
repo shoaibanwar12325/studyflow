@@ -4,7 +4,7 @@ CS52001 Mobile Application Development – MAB001 Mobile App Development Project
 
 StudyFlow is an offline-first Progressive Web App that helps university students manage deadlines, a weekly timetable and focused study time. Everything is **encrypted on the device** with a key derived from the user's password.
 
-![Today screen](screenshots/today.png)
+**Live app:** https://shoaibanwar12325.github.io/studyflow/
 
 ## Features and how they map to the brief
 
@@ -41,7 +41,6 @@ tests/unit/         unit tests
 tests/e2e/          Playwright end-to-end tests + API fixtures
 tools/serve.mjs     zero-dependency local web server
 docs/               design proposal, testing evidence, demo script, diagrams
-screenshots/        screenshots produced by the E2E run
 ```
 
 ## Run it locally
