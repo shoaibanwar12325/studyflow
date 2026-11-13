@@ -447,6 +447,14 @@ button.list-row { width: 100%; background: none; border: 0; border-top: 1px soli
 .card-tight > .section-head { padding: .75rem 1rem 0; margin-bottom: .25rem; }
 .card-tight > .progress { margin: 0 1rem .5rem; }
 
+.howto { margin: 0; padding-left: 1.15rem; display: grid; gap: .5rem; font-size: .9375rem; }
+.check-row { display: flex; align-items: center; gap: .75rem; min-height: 3.5rem; padding: .5rem 1rem; border-top: 1px solid var(--border); cursor: pointer; }
+.list > li:first-child > .check-row { border-top: 0; }
+.check-row .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.check-row .meta { font-size: .8125rem; color: var(--muted); }
+.check-row input:disabled ~ .grow { opacity: .65; }
+.check-row .check { flex: none; }
+
 /* =========================================================== more */
 .profile { display: flex; gap: 1rem; align-items: center; }
 .avatar { width: 3.5rem; height: 3.5rem; border-radius: 50%; display: grid; place-items: center; background: var(--primary); color: var(--on-primary); font-weight: 800; font-size: 1.375rem; flex: none; }

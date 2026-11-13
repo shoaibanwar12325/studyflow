@@ -6,12 +6,12 @@
  *     cached response when offline.
  *   • Notification clicks open/focus the app at the relevant task.
  */
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.1.0';
 const SHELL_CACHE = `studyflow-shell-${VERSION}`;
 const API_CACHE = 'studyflow-api';
 const SHELL = [
   './', 'index.html', 'style.css', 'app.js', 'manifest.json',
-  'js/boot.js', 'js/core.js', 'js/crypto.js', 'js/store.js', 'js/api.js', 'js/icons.js',
+  'js/boot.js', 'js/core.js', 'js/crypto.js', 'js/store.js', 'js/api.js', 'js/icons.js', 'js/ics.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png', 'icons/badge-96.png',
 ];
 const API_HOSTS = ['api.open-meteo.com', 'geocoding-api.open-meteo.com', 'www.gov.uk'];

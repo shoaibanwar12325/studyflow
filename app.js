@@ -9,8 +9,9 @@ import * as vaultCrypto from './js/crypto.js';
 import * as db from './js/store.js';
 import * as api from './js/api.js';
 import { icon } from './js/icons.js';
+import * as ics from './js/ics.js';
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const DEFAULT_PLACE = { name: 'Dundee', detail: 'Scotland (default)', lat: 56.46, lon: -2.97, source: 'default' };
 const RING_C = 2 * Math.PI * 45; // circumference of r=45 progress rings
 
@@ -189,6 +190,7 @@ function viewFor(r) {
     case 'module': return viewModuleForm(r.id === 'new' ? null : moduleById(r.id));
     case 'class': return viewClassForm(r.id === 'new' ? null : S.state.classes.find(c => c.id === r.id));
     case 'password': return viewPassword();
+    case 'import': return viewImport();
     default: return viewNotFound();
   }
 }
@@ -435,6 +437,12 @@ function viewToday() {
       <button type="button" class="icon-btn" data-action="dismiss-install" aria-label="Dismiss install suggestion">${icon('close', { size: 20 })}</button>
     </div>` : ''}
 
+    ${!st.modules.length && !st.tasks.length ? `<div class="card stack-sm section">
+      <h2>Set up in one minute</h2>
+      <p class="small muted">Import your timetable and deadlines from your student portal's calendar file, or add them yourself.</p>
+      <div class="btn-row"><a class="btn btn-primary" href="#/import">${icon('upload', { size: 18 })} Import calendar</a><a class="btn btn-ghost" href="#/module/new">Add a module</a></div>
+    </div>` : ''}
+
     <div class="grid-2 section">
       <section class="card stack" aria-labelledby="sum-h">
         <h2 id="sum-h" class="visually-hidden">Today's progress</h2>
@@ -564,7 +572,7 @@ function renderTaskList() {
   const td = today();
   const list = core.sortTasks(core.filterTasks(S.state.tasks, { view: S.ui.view, moduleId: S.ui.moduleId, query: S.ui.query }, td), S.ui.sort, S.state.modules);
   const empty = S.state.tasks.length === 0
-    ? `<div class="empty">${icon('tasks', { size: 32 })}<strong>No tasks yet</strong><span>Add assignments, readings and revision so nothing sneaks up on you.</span><a class="btn btn-primary" href="#/task/new">${icon('plus', { size: 20 })} Add a task</a></div>`
+    ? `<div class="empty">${icon('tasks', { size: 32 })}<strong>No tasks yet</strong><span>Add assignments, readings and revision so nothing sneaks up on you.</span><a class="btn btn-primary" href="#/task/new">${icon('plus', { size: 20 })} Add a task</a><a class="btn btn-ghost" href="#/import">Import from calendar file</a></div>`
     : `<div class="empty">${icon('search', { size: 28 })}<strong>No matching tasks</strong><span>Try another filter or search term.</span></div>`;
   box.innerHTML = taskList(list, empty);
   hydrate(box);
@@ -678,7 +686,7 @@ function viewCalendar() {
   const isThisWeek = dates.includes(td);
   return {
     title: 'Week', tab: 'calendar', fab: true, html: `
-    ${header('Week', { sub: range })}
+    ${header('Week', { sub: range, actions: `<a class="icon-btn" href="#/import" aria-label="Import calendar file">${icon('upload')}</a>` })}
     <div class="week-nav">
       <button type="button" class="icon-btn" data-action="week" data-dir="-1" aria-label="Previous week">${icon('back')}</button>
       <div class="label" aria-live="polite">${isThisWeek ? 'This week' : esc(range)}</div>
@@ -855,6 +863,8 @@ function viewMore() {
     <h2 class="group-title">Study</h2>
     <ul class="list card card-tight">
       <li><a class="list-row list-link" href="#/modules"><span class="row-icon">${icon('book', { size: 20 })}</span><span class="grow"><span class="title">Modules & timetable</span><br><span class="meta">${st.modules.length} modules · ${st.classes.length} weekly classes</span></span>${icon('next', { size: 20 })}</a></li>
+      <li><a class="list-row list-link" href="#/import"><span class="row-icon">${icon('upload', { size: 20 })}</span><span class="grow"><span class="title">Import calendar (.ics)</span><br><span class="meta">Timetable and deadlines from your student portal, Outlook or Google</span></span>${icon('next', { size: 20 })}</a></li>
+      <li><button type="button" class="list-row list-link btn-block" data-action="export-ics"><span class="row-icon">${icon('calendar', { size: 20 })}</span><span class="grow"><span class="title">Add deadlines to my calendar</span><br><span class="meta">Export open deadlines as an .ics file with reminders</span></span></button></li>
     </ul>
 
     <h2 class="group-title" id="a11y-h">Accessibility & display</h2>
@@ -916,13 +926,137 @@ function viewMore() {
   };
 }
 
+/* ===================================================== calendar import (.ics) */
+const moduleByCode = code => S.state.modules.find(m => m.code.toUpperCase() === code);
+
+function viewImport() {
+  const p = S.importPlan;
+  const st = S.state;
+  let body;
+  if (!p) {
+    body = `
+    <section class="card stack">
+      <p>Bring in your <strong>timetable</strong> and <strong>assignment deadlines</strong> from your student portal in one go. StudyFlow reads standard calendar files (<strong>.ics</strong>) – the same format Outlook and Google Calendar use.</p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" data-action="pick-ics">${icon('upload', { size: 20 })} Choose .ics file</button>
+        <button type="button" class="btn btn-secondary" data-action="sample-ics">${icon('sparkle', { size: 20 })} Try a sample university calendar</button>
+      </div>
+      <p class="privacy-note">${icon('shield', { size: 18 })}<span>The file is read on this device only – it is never uploaded anywhere.</span></p>
+    </section>
+    <section class="card stack-sm section" aria-labelledby="how-h">
+      <h2 id="how-h">Where do I get the file?</h2>
+      <ul class="howto">
+        <li><strong>Student portal or timetable:</strong> look for <em>Export</em>, <em>Subscribe</em>, <em>iCal</em> or <em>Add to calendar</em> and download the .ics file.</li>
+        <li><strong>Blackboard / VLE:</strong> Calendar › <em>Share calendar</em> (or <em>Get external calendar link</em>), open the link and save the .ics file.</li>
+        <li><strong>Outlook:</strong> Calendar › Share › Publish calendar (ICS), or File › Save Calendar.</li>
+        <li><strong>Google Calendar:</strong> Settings › Import &amp; export › Export.</li>
+      </ul>
+      <p class="small muted">Weekly lectures and labs become your timetable, due dates and exams become tasks, and module codes such as CS52001 become modules. You review everything before it is added, and importing the same file again updates items instead of duplicating them.</p>
+    </section>`;
+  } else {
+    const td = today();
+    const rowCls = c => {
+      const exists = st.classes.find(x => x.sourceKey === c.key);
+      const dup = !exists && st.classes.find(x => moduleByCode(c.code)?.id === x.moduleId && Number(x.day) === c.day && x.start === c.start);
+      return `<li><label class="check-row"><input type="checkbox" class="check" name="imp" value="c:${esc(c.key)}" ${dup ? '' : 'checked'}>
+        <span class="grow"><strong>${esc(c.code || c.title)}</strong> ${esc(c.kind)}<br><span class="meta">${core.DAY_NAMES[c.day]}s ${esc(c.start)}–${esc(c.end)}${c.room ? ` · ${esc(c.room)}` : ''}</span></span>
+        ${exists ? '<span class="badge">Update</span>' : dup ? '<span class="badge">Already added</span>' : ''}</label></li>`;
+    };
+    const rowDue = d => {
+      const exists = st.tasks.find(t => t.sourceUid === d.key);
+      return `<li><label class="check-row"><input type="checkbox" class="check" name="imp" value="d:${esc(d.key)}" checked>
+        <span class="grow"><strong>${esc(d.title)}</strong><br><span class="meta">${d.code ? `${esc(d.code)} · ` : ''}${esc(core.dueLabel({ due: d.due, dueTime: d.dueTime }, td))} · ${cap(d.type)}</span></span>
+        ${exists ? '<span class="badge">Update</span>' : `<span class="badge ${d.priority}">${cap(d.priority)}</span>`}</label></li>`;
+    };
+    const rowMod = m => {
+      const exists = moduleByCode(m.code);
+      return `<li><label class="check-row"><input type="checkbox" class="check" name="imp" value="m:${esc(m.code)}" ${exists ? 'disabled' : 'checked'}>
+        <span class="grow"><strong>${esc(m.code)}</strong> ${esc(m.name || '')}</span>${exists ? '<span class="badge">Already added</span>' : ''}</label></li>`;
+    };
+    const total = p.modules.length + p.classes.length + p.deadlines.length;
+    body = total ? `
+    <p class="alert info" role="status">Found in <strong>${esc(p.fileName)}</strong>: ${p.modules.length} ${p.modules.length === 1 ? 'module' : 'modules'}, ${p.classes.length} weekly ${p.classes.length === 1 ? 'class' : 'classes'} and ${p.deadlines.length} ${p.deadlines.length === 1 ? 'deadline' : 'deadlines'}${p.skipped ? ` (${p.skipped} past or other events skipped)` : ''}. Untick anything you don't want.</p>
+    <form class="form" data-form="import" novalidate>
+      ${p.deadlines.length ? `<section class="card card-tight" aria-labelledby="imp-d"><div class="section-head"><h2 id="imp-d">Deadlines &amp; exams</h2></div><ul class="list">${p.deadlines.map(rowDue).join('')}</ul></section>` : ''}
+      ${p.classes.length ? `<section class="card card-tight" aria-labelledby="imp-c"><div class="section-head"><h2 id="imp-c">Weekly timetable</h2></div><ul class="list">${p.classes.map(rowCls).join('')}</ul></section>` : ''}
+      ${p.modules.length ? `<section class="card card-tight" aria-labelledby="imp-m"><div class="section-head"><h2 id="imp-m">Modules</h2></div><ul class="list">${p.modules.map(rowMod).join('')}</ul></section>` : ''}
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" data-action="import-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="import-btn">${icon('check', { size: 20 })} Import selected</button>
+      </div>
+    </form>` : `<div class="empty">${icon('calendar', { size: 28 })}<strong>Nothing to import</strong><span>${esc(p.fileName)} has no upcoming classes or deadlines${p.skipped ? ` (${p.skipped} past or other events were skipped)` : ''}.</span><button type="button" class="btn btn-ghost" data-action="import-cancel">Choose another file</button></div>`;
+  }
+  return { title: 'Import calendar', tab: 'more', html: `${header('Import calendar', { back: '#/more' })}${body}` };
+}
+
+function loadICSText(text, fileName) {
+  const events = ics.parseICS(text);
+  if (!events.length) throw new Error('No events were found in that calendar file.');
+  S.importPlan = { ...ics.planImport(events, today()), fileName, eventCount: events.length };
+  go('#/import');
+  announce(`Calendar read. Review the items to import.`);
+}
+
+async function handleICSFile(file) {
+  if (!file) return;
+  if (file.size > 5 * 1048576) return toast('That file is too large (maximum 5 MB).');
+  try { loadICSText(await file.text(), file.name); } catch (err) { toast(err.message || 'Could not read that calendar file.'); }
+}
+
+function applyImport(form) {
+  const p = S.importPlan, st = S.state;
+  if (!p) return;
+  const sel = new Set(new FormData(form).getAll('imp'));
+  if (!sel.size) return toast('Select at least one item to import.');
+  const n = { modules: 0, classes: 0, tasks: 0, updated: 0 };
+  const ensureModule = code => {
+    if (!code) return '';
+    let m = moduleByCode(code);
+    if (!m) {
+      const info = p.modules.find(x => x.code === code) || { code, name: '' };
+      const colour = core.MODULE_COLOURS.find(c => !st.modules.some(x => x.colour === c)) || core.MODULE_COLOURS[st.modules.length % core.MODULE_COLOURS.length];
+      m = { id: core.createId('m'), code, name: (info.name || code).slice(0, 60), colour };
+      st.modules.push(m); n.modules++;
+    }
+    return m.id;
+  };
+  p.modules.forEach(m => { if (sel.has(`m:${m.code}`)) ensureModule(m.code); });
+  p.classes.forEach(c => {
+    if (!sel.has(`c:${c.key}`)) return;
+    const data = { moduleId: ensureModule(c.code), kind: c.code ? c.kind : c.title.slice(0, 40), day: c.day, start: c.start, end: c.end, room: (c.room || '').slice(0, 40), sourceKey: c.key };
+    const existing = st.classes.find(x => x.sourceKey === c.key);
+    if (existing) { Object.assign(existing, data); n.updated++; } else { st.classes.push({ id: core.createId('c'), ...data }); n.classes++; }
+  });
+  p.deadlines.forEach(d => {
+    if (!sel.has(`d:${d.key}`)) return;
+    const moduleId = ensureModule(d.code);
+    const existing = st.tasks.find(t => t.sourceUid === d.key);
+    if (existing) {
+      if (existing.due !== d.due || existing.dueTime !== d.dueTime) delete st.notified[existing.id];
+      Object.assign(existing, { title: d.title.slice(0, 120), due: d.due, dueTime: d.dueTime, moduleId: existing.moduleId || moduleId, updatedAt: Date.now() });
+      if (!existing.notes) existing.notes = d.notes;
+      n.updated++;
+    } else {
+      st.tasks.push({ id: core.createId('t'), title: d.title.slice(0, 120), moduleId, type: d.type, due: d.due, dueTime: d.dueTime, priority: d.priority,
+        notes: d.notes, subtasks: [], photoIds: [], done: false, completedAt: null, createdAt: Date.now(), sourceUid: d.key });
+      n.tasks++;
+    }
+  });
+  S.importPlan = null;
+  save();
+  haptic([20, 40, 20]);
+  go('#/calendar', true);
+  const parts = [n.tasks && `${n.tasks} ${n.tasks === 1 ? 'deadline' : 'deadlines'}`, n.classes && `${n.classes} ${n.classes === 1 ? 'class' : 'classes'}`, n.modules && `${n.modules} ${n.modules === 1 ? 'module' : 'modules'}`].filter(Boolean);
+  toast(`Imported ${parts.join(', ') || 'nothing new'}${n.updated ? ` · ${n.updated} updated` : ''}.`);
+}
+
 /* ======================================================= modules & classes */
 function viewModules() {
   const st = S.state;
   const byDay = [1, 2, 3, 4, 5, 6, 0].map(d => ({ d, list: st.classes.filter(c => Number(c.day) === d).sort((a, b) => a.start.localeCompare(b.start)) })).filter(x => x.list.length);
   return {
     title: 'Modules & timetable', tab: 'more', html: `
-    ${header('Modules & timetable', { back: '#/more' })}
+    ${header('Modules & timetable', { back: '#/more', actions: `<a class="icon-btn" href="#/import" aria-label="Import calendar file">${icon('upload')}</a>` })}
     <section class="section" aria-labelledby="mods-h">
       <div class="section-head"><h2 id="mods-h">Modules</h2><a href="#/module/new">${icon('plus', { size: 16 })} Add module</a></div>
       ${st.modules.length ? `<ul class="list card card-tight">${st.modules.map(m => {
@@ -1104,7 +1238,7 @@ async function lock(reason = '') {
   if (!S.key) return;
   await flush();
   releaseWakeLock();
-  S.key = null; S.state = null; S.timer = null;
+  S.key = null; S.state = null; S.timer = null; S.importPlan = null;
   S.photoUrls.forEach(u => URL.revokeObjectURL(u)); S.photoUrls.clear();
   closeDialog();
   S.afterUnlock = location.hash;
@@ -1533,6 +1667,24 @@ async function exportBackup() {
   toast('Encrypted backup downloaded.');
 }
 
+function downloadFile(file) {
+  const url = URL.createObjectURL(file);
+  const a = Object.assign(document.createElement('a'), { href: url, download: file.name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+async function exportICS() {
+  const open = S.state.tasks.filter(t => !t.done && t.due);
+  if (!open.length) return toast('No upcoming deadlines to export yet.');
+  const file = new File([ics.tasksToICS(open, S.state.modules)], `studyflow-deadlines-${today()}.ics`, { type: 'text/calendar' });
+  if (navigator.canShare?.({ files: [file] }) && matchMedia('(pointer: coarse)').matches) {
+    try { await navigator.share({ files: [file], title: 'StudyFlow deadlines' }); return; } catch (err) { if (err.name === 'AbortError') return; }
+  }
+  downloadFile(file);
+  toast(`${open.length} ${open.length === 1 ? 'deadline' : 'deadlines'} exported – open the file to add them to your calendar app.`);
+}
+
 async function importBackup(file) {
   try {
     const json = JSON.parse(await file.text());
@@ -1628,6 +1780,10 @@ const clickActions = {
   },
   'dismiss-install': () => { S.state.settings.installDismissed = true; save(); refresh(); },
   export: () => exportBackup(),
+  'export-ics': () => exportICS(),
+  'pick-ics': () => { const i = $('#ics-input'); i.value = ''; i.click(); },
+  'sample-ics': () => loadICSText(ics.sampleICS(today()), 'sample-university-calendar.ics'),
+  'import-cancel': () => { S.importPlan = null; refresh(); },
   import: () => { const i = $('#import-input'); i.value = ''; i.click(); },
   'delete-all': () => deleteAll(),
   'delete-module': el => deleteModule(el.dataset.id),
@@ -1686,6 +1842,7 @@ function bindEvents() {
     }
     if (el.id === 'photo-input' && el.files[0]) addPhoto(el.dataset.task, el.files[0]);
     if (el.id === 'import-input' && el.files[0]) importBackup(el.files[0]);
+    if (el.id === 'ics-input' && el.files[0]) handleICSFile(el.files[0]);
   });
 
   let searchT;
@@ -1713,7 +1870,7 @@ function bindEvents() {
     if (!kind) return;
     e.preventDefault();
     ({
-      signup: onSignup, unlock: onUnlock, task: onTaskSubmit, module: onModuleSubmit, class: onClassSubmit, password: onChangePassword,
+      signup: onSignup, unlock: onUnlock, task: onTaskSubmit, module: onModuleSubmit, class: onClassSubmit, password: onChangePassword, import: applyImport,
       subtask: f => {
         const text = new FormData(f).get('text').trim();
         if (!text) return;
