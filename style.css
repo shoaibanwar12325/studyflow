@@ -530,3 +530,6 @@ button.list-row { width: 100%; background: none; border: 0; border-top: 1px soli
   body { background: #fff; color: #000; }
 }
 .center { text-align: center; }
+.steps { margin: 0; padding-left: 1.25rem; display: grid; gap: .4rem; color: var(--muted); }
+.input[type="file"] { padding: .55rem; cursor: pointer; }
+.input[type="file"]::file-selector-button { font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: .45rem .9rem; margin-right: .75rem; background: var(--primary-soft); color: var(--primary-strong); cursor: pointer; }

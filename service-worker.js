@@ -6,7 +6,7 @@
  *     cached response when offline.
  *   • Notification clicks open/focus the app at the relevant task.
  */
-const VERSION = 'v1.2.0';
+const VERSION = 'v1.2.1';
 const SHELL_CACHE = `studyflow-shell-${VERSION}`;
 const API_CACHE = 'studyflow-api';
 const SHELL = [

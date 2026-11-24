@@ -11,7 +11,7 @@ import * as api from './js/api.js';
 import { icon } from './js/icons.js';
 import * as ics from './js/ics.js';
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 const DEFAULT_PLACE = { name: 'Dundee', detail: 'Scotland (default)', lat: 56.46, lon: -2.97, source: 'default' };
 const RING_C = 2 * Math.PI * 45; // circumference of r=45 progress rings
 
@@ -160,15 +160,15 @@ function go(hash, replace = false) {
   if (replace) { history.replaceState(null, '', hash); route(); } else if (location.hash === hash) route(); else location.hash = hash;
 }
 
-const PUBLIC = ['welcome', 'signup', 'privacy'];
+const PUBLIC = ['welcome', 'signup', 'signin', 'privacy'];
 function route() {
   const r = parseRoute();
   if (!S.vault && !PUBLIC.includes(r.name)) return go('#/welcome', true);
   if (S.vault && !S.key && r.name !== 'unlock') {
-    if (!['', 'welcome', 'signup'].includes(r.name)) S.afterUnlock = location.hash;
+    if (!['', 'welcome', 'signup', 'signin'].includes(r.name)) S.afterUnlock = location.hash;
     return go('#/unlock', true);
   }
-  if (S.key && ['', 'welcome', 'signup', 'unlock'].includes(r.name)) return go('#/today', true);
+  if (S.key && ['', 'welcome', 'signup', 'signin', 'unlock'].includes(r.name)) return go('#/today', true);
   const h = location.hash;
   if (S.stack[S.stack.length - 2] === h) S.stack.pop(); else if (S.stack[S.stack.length - 1] !== h) S.stack.push(h);
   if (S.stack.length > 30) S.stack.shift();
@@ -179,6 +179,7 @@ function viewFor(r) {
   switch (r.name) {
     case 'welcome': return viewWelcome();
     case 'signup': return viewSignup();
+    case 'signin': return viewSignin();
     case 'unlock': return viewUnlock();
     case 'privacy': return viewPrivacy();
     case 'today': return viewToday();
@@ -346,8 +347,7 @@ function viewWelcome() {
         <li><span class="row-icon">${icon('focus', { size: 20 })}</span><span><strong>Focus timer</strong><br><span class="muted small">Pomodoro sessions that keep the screen on and vibrate when done.</span></span></li>
       </ul>
       <a class="btn btn-primary btn-block" href="#/signup">Get started</a>
-      <button type="button" class="btn btn-ghost btn-block" data-action="import">${icon('upload', { size: 20 })}<span>I already have an account</span></button>
-      <p class="muted small center">On a new phone or laptop? Choose the backup file from your other device (More › Data › Export encrypted backup) and enter your password.</p>
+      <a class="btn btn-ghost btn-block" href="#/signin">I already have an account – sign in</a>
       <p class="privacy-note">${icon('shield', { size: 18 })}<span>No account server, no tracking. <a href="#/privacy">Read the privacy notice</a>.</span></p>
     </section>`,
   };
@@ -373,6 +373,63 @@ function viewSignup() {
       <button class="btn btn-primary btn-block" type="submit" id="signup-btn">Create planner</button>
     </form>`,
   };
+}
+
+function viewSignin() {
+  return {
+    title: 'Sign in', html: `
+    ${header('Sign in', { back: '#/welcome' })}
+    <form class="form" data-form="signin" novalidate>
+      <div class="stack-sm"><h1 tabindex="-1">Sign in to your account</h1>
+        <p class="muted">StudyFlow has no account server – your account lives, encrypted, on the device where you created it. To sign in on this phone or laptop, bring your account over with its backup file.</p></div>
+      <ol class="steps small">
+        <li>On your other device, open <strong>More › Data › Export encrypted backup</strong> and send the file to this device (e.g. by email).</li>
+        <li>Choose that file below and enter your password.</li>
+      </ol>
+      <div class="field"><label for="f-backup">Account backup file</label>
+        <input id="f-backup" name="backup" class="input" type="file" accept="application/json,.json" aria-describedby="err-backup">
+        <span class="error" id="err-backup"></span></div>
+      ${passwordField({ name: 'password', label: 'Password', autocomplete: 'current-password' })}
+      <div class="alert" id="signin-alert" role="alert"></div>
+      <button class="btn btn-primary btn-block" type="submit" id="signin-btn">${icon('lock', { size: 20 })} Sign in</button>
+      <p class="small muted center">New to StudyFlow? <a href="#/signup">Create an account</a></p>
+    </form>`,
+  };
+}
+
+async function onSignin(form) {
+  const fd = new FormData(form);
+  const file = fd.get('backup'), pw = fd.get('password');
+  const errs = {};
+  if (!file || !file.size) errs.backup = 'Choose your backup file.';
+  if (!pw) errs.password = 'Enter your password.';
+  if (Object.keys(errs).length) return showErrors(form, errs);
+  const btn = $('#signin-btn'), alertEl = $('#signin-alert');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Signing in…';
+  try {
+    let json;
+    try { json = JSON.parse(await file.text()); } catch { throw new Error('NOT_BACKUP'); }
+    if (json.app !== 'StudyFlow' || !json.vault?.salt || !json.vault?.data) throw new Error('NOT_BACKUP');
+    const { key, state } = await vaultCrypto.openVault(pw, json.vault);
+    await db.wipeAll();
+    await db.put('kv', 'vault', json.vault);
+    for (const [id, p] of Object.entries(json.photos || {})) await db.put('photos', id, p);
+    S.vault = json.vault; S.key = key; S.state = core.migrateState(state);
+    localStorage.removeItem('sf_fail');
+    onUnlocked();
+    go('#/today', true);
+    const nm = S.state.profile?.name;
+    toast(`Signed in${nm ? ` – welcome back, ${nm}` : ''}! ${S.state.tasks.length} tasks loaded.`);
+  } catch (err) {
+    btn.disabled = false; btn.innerHTML = `${icon('lock', { size: 20 })} Sign in`;
+    if (err.message === 'WRONG_PASSWORD') {
+      const input = $('#f-password'); input.value = ''; input.setAttribute('aria-invalid', 'true'); input.focus();
+      alertEl.textContent = 'Incorrect password for this account.';
+    } else if (err.message === 'NOT_BACKUP') {
+      showErrors(form, { backup: 'This is not a StudyFlow backup file.' });
+    } else alertEl.textContent = `Could not sign in: ${err.message}`;
+    haptic([60, 40, 60]);
+  }
 }
 
 function viewUnlock() {
@@ -1880,7 +1937,7 @@ function bindEvents() {
     if (!kind) return;
     e.preventDefault();
     ({
-      signup: onSignup, unlock: onUnlock, task: onTaskSubmit, module: onModuleSubmit, class: onClassSubmit, password: onChangePassword, import: applyImport,
+      signup: onSignup, signin: onSignin, unlock: onUnlock, task: onTaskSubmit, module: onModuleSubmit, class: onClassSubmit, password: onChangePassword, import: applyImport,
       subtask: f => {
         const text = new FormData(f).get('text').trim();
         if (!text) return;
