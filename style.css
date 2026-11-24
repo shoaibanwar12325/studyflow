@@ -529,3 +529,4 @@ button.list-row { width: 100%; background: none; border: 0; border-top: 1px soli
   .tabbar, .fab, .offline-banner, .header-actions { display: none !important; }
   body { background: #fff; color: #000; }
 }
+.center { text-align: center; }

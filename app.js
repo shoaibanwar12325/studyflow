@@ -11,7 +11,7 @@ import * as api from './js/api.js';
 import { icon } from './js/icons.js';
 import * as ics from './js/ics.js';
 
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const DEFAULT_PLACE = { name: 'Dundee', detail: 'Scotland (default)', lat: 56.46, lon: -2.97, source: 'default' };
 const RING_C = 2 * Math.PI * 45; // circumference of r=45 progress rings
 
@@ -113,8 +113,8 @@ function confirmDialog({ title, body, confirm = 'Confirm', danger = false, requi
       <form method="dialog" class="dialog-body">
         <h2 id="dialog-title">${esc(title)}</h2>
         <p>${body}</p>
-        ${requireText ? `<div class="field"><label for="confirm-text">Type <strong>${esc(requireText)}</strong> to confirm</label>
-          <input id="confirm-text" class="input" autocomplete="off" autocapitalize="characters"></div>` : ''}
+        ${requireText ? `<div class="field"><label for="confirm-text">Type <strong>${esc(requireText)}</strong>, then tap <strong>${esc(confirm)}</strong></label>
+          <input id="confirm-text" class="input" autocomplete="off" autocapitalize="characters" enterkeyhint="done"></div>` : ''}
         <div class="btn-row">
           <button class="btn btn-ghost" value="cancel">Cancel</button>
           <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" value="ok" id="dialog-ok" ${requireText ? 'disabled' : ''}>${esc(confirm)}</button>
@@ -123,6 +123,8 @@ function confirmDialog({ title, body, confirm = 'Confirm', danger = false, requi
     if (requireText) {
       const input = $('#confirm-text', d), ok = $('#dialog-ok', d);
       input.addEventListener('input', () => { ok.disabled = input.value.trim().toUpperCase() !== requireText; });
+      // Bug fix: pressing Enter used to trigger the first button (Cancel). Enter now confirms once the text matches.
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!ok.disabled) ok.click(); } });
       input.focus();
     }
     d.addEventListener('close', () => resolve(d.returnValue === 'ok'), { once: true });
@@ -142,7 +144,9 @@ function passwordDialog({ title, body }) {
           <button class="btn btn-primary" value="ok">Continue</button>
         </div>
       </form>`);
-    $('#dlg-pw', d).focus();
+    const pw = $('#dlg-pw', d);
+    pw.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('button[value="ok"]', d).click(); } });
+    pw.focus();
     d.addEventListener('close', () => resolve(d.returnValue === 'ok' ? $('#dlg-pw', d).value : null), { once: true });
   });
 }
@@ -342,6 +346,8 @@ function viewWelcome() {
         <li><span class="row-icon">${icon('focus', { size: 20 })}</span><span><strong>Focus timer</strong><br><span class="muted small">Pomodoro sessions that keep the screen on and vibrate when done.</span></span></li>
       </ul>
       <a class="btn btn-primary btn-block" href="#/signup">Get started</a>
+      <button type="button" class="btn btn-ghost btn-block" data-action="import">${icon('upload', { size: 20 })}<span>I already have an account</span></button>
+      <p class="muted small center">On a new phone or laptop? Choose the backup file from your other device (More › Data › Export encrypted backup) and enter your password.</p>
       <p class="privacy-note">${icon('shield', { size: 18 })}<span>No account server, no tracking. <a href="#/privacy">Read the privacy notice</a>.</span></p>
     </section>`,
   };
@@ -904,7 +910,7 @@ function viewMore() {
 
     <h2 class="group-title" id="data-h">Your data</h2>
     <ul class="list card card-tight" aria-labelledby="data-h">
-      <li><button type="button" class="list-row list-link btn-block" data-action="export"><span class="row-icon">${icon('download', { size: 20 })}</span><span class="grow"><span class="title">Export encrypted backup</span><br><span class="meta">Restorable with your current password.</span></span></button></li>
+      <li><button type="button" class="list-row list-link btn-block" data-action="export"><span class="row-icon">${icon('download', { size: 20 })}</span><span class="grow"><span class="title">Export encrypted backup</span><br><span class="meta">Use it to sign in on another device with your current password.</span></span></button></li>
       <li><button type="button" class="list-row list-link btn-block" data-action="import"><span class="row-icon">${icon('upload', { size: 20 })}</span><span class="grow"><span class="title">Restore from backup</span><br><span class="meta">Replaces the data on this device.</span></span></button></li>
       <li class="setting-row"><span class="grow small muted" id="storage-used">Calculating storage…</span></li>
       <li><a class="list-row list-link" href="#/privacy"><span class="row-icon">${icon('info', { size: 20 })}</span><span class="grow title">Privacy notice</span>${icon('next', { size: 20 })}</a></li>
@@ -1689,11 +1695,14 @@ async function importBackup(file) {
   try {
     const json = JSON.parse(await file.text());
     if (json.app !== 'StudyFlow' || !json.vault?.salt || !json.vault?.data) throw new Error('This is not a StudyFlow backup file.');
-    const pw = await passwordDialog({ title: 'Restore backup', body: `Enter the password that was used when this backup was made (${json.exportedAt?.slice(0, 10) || 'unknown date'}).` });
+    const signIn = !S.vault;
+    const pw = await passwordDialog({ title: signIn ? 'Sign in to your account' : 'Restore backup', body: `Enter the password of the account in this backup (made ${json.exportedAt?.slice(0, 10) || 'on an unknown date'}).` });
     if (!pw) return;
     const { key, state } = await vaultCrypto.openVault(pw, json.vault);
-    const ok = await confirmDialog({ title: 'Replace data on this device?', body: `The backup has ${state.tasks?.length || 0} tasks. Everything currently on this device will be replaced.`, confirm: 'Restore', danger: true });
-    if (!ok) return;
+    if (!signIn) {
+      const ok = await confirmDialog({ title: 'Replace data on this device?', body: `The backup has ${state.tasks?.length || 0} tasks. Everything currently on this device will be replaced.`, confirm: 'Restore', danger: true });
+      if (!ok) return;
+    }
     await db.wipeAll();
     await db.put('kv', 'vault', json.vault);
     for (const [id, p] of Object.entries(json.photos || {})) await db.put('photos', id, p);
@@ -1701,7 +1710,8 @@ async function importBackup(file) {
     S.vault = json.vault; S.key = key; S.state = core.migrateState(state);
     onUnlocked();
     go('#/today', true);
-    toast('Backup restored. Your password is now the backup’s password.');
+    const nm = S.state.profile?.name;
+    toast(signIn ? `Signed in${nm ? ` – welcome back, ${nm}` : ''}! ${S.state.tasks.length} tasks loaded.` : 'Backup restored. Your password is now the backup’s password.');
   } catch (err) {
     toast(err.message === 'WRONG_PASSWORD' ? 'Wrong password for that backup.' : `Restore failed: ${err.message}`);
   }
