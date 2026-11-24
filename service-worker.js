@@ -6,7 +6,7 @@
  *     cached response when offline.
  *   • Notification clicks open/focus the app at the relevant task.
  */
-const VERSION = 'v1.2.1';
+const VERSION = 'v1.2.2';
 const SHELL_CACHE = `studyflow-shell-${VERSION}`;
 const API_CACHE = 'studyflow-api';
 const SHELL = [
@@ -17,7 +17,8 @@ const SHELL = [
 const API_HOSTS = ['api.open-meteo.com', 'geocoding-api.open-meteo.com', 'www.gov.uk'];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(SHELL_CACHE).then(cache => cache.addAll(SHELL)));
+  // cache: 'reload' bypasses the browser's HTTP cache so a new version never stores stale copies of the shell.
+  event.waitUntil(caches.open(SHELL_CACHE).then(cache => cache.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))));
 });
 
 self.addEventListener('activate', event => {

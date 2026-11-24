@@ -11,7 +11,7 @@ import * as api from './js/api.js';
 import { icon } from './js/icons.js';
 import * as ics from './js/ics.js';
 
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.2.2';
 const DEFAULT_PLACE = { name: 'Dundee', detail: 'Scotland (default)', lat: 56.46, lon: -2.97, source: 'default' };
 const RING_C = 2 * Math.PI * 45; // circumference of r=45 progress rings
 
