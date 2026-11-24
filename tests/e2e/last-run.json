@@ -1,0 +1,297 @@
+{
+  "date": "2026-11-24T11:06:51.709Z",
+  "results": [
+    {
+      "name": "First launch shows the welcome screen",
+      "ok": true,
+      "ms": 313
+    },
+    {
+      "name": "Sign-up validates the password and consent",
+      "ok": true,
+      "ms": 231
+    },
+    {
+      "name": "Account is created and the Today dashboard loads (with sample data)",
+      "ok": true,
+      "ms": 315
+    },
+    {
+      "name": "API: weather (Open-Meteo) is fetched and displayed with advice",
+      "ok": true,
+      "ms": 55
+    },
+    {
+      "name": "API: GOV.UK bank holidays are fetched and shown",
+      "ok": true,
+      "ms": 501
+    },
+    {
+      "name": "Sensor: GPS location updates the forecast (coordinates rounded to ~1 km)",
+      "ok": true,
+      "ms": 515
+    },
+    {
+      "name": "API: city search (Open-Meteo geocoding) changes the weather location",
+      "ok": true,
+      "ms": 183
+    },
+    {
+      "name": "Local storage: data in IndexedDB is encrypted (no plaintext)",
+      "ok": true,
+      "ms": 408
+    },
+    {
+      "name": "Tasks: search, filter chips and module filter",
+      "ok": true,
+      "ms": 811
+    },
+    {
+      "name": "Tasks: add a task with validation (FAB → form → list)",
+      "ok": true,
+      "ms": 301
+    },
+    {
+      "name": "Tasks: complete a task (checkbox), undo toast shown",
+      "ok": true,
+      "ms": 142
+    },
+    {
+      "name": "Task detail: add steps and attach a camera photo (compressed + encrypted)",
+      "ok": true,
+      "ms": 426
+    },
+    {
+      "name": "Week planner: 7 days with classes, deadlines, forecast; week navigation",
+      "ok": true,
+      "ms": 228
+    },
+    {
+      "name": "Focus timer: start, pause, and complete logs the session",
+      "ok": true,
+      "ms": 2512
+    },
+    {
+      "name": "Settings: text size, high contrast and dark theme apply instantly",
+      "ok": true,
+      "ms": 658
+    },
+    {
+      "name": "Modules: add a module and a weekly class",
+      "ok": true,
+      "ms": 578
+    },
+    {
+      "name": "Calendar import: a student-portal .ics file is previewed and imported (modules, classes, deadlines)",
+      "ok": true,
+      "ms": 830
+    },
+    {
+      "name": "Calendar: sample university calendar de-duplicates, and deadlines export as .ics",
+      "ok": true,
+      "ms": 4218
+    },
+    {
+      "name": "Notifications: enabling reminders shows a notification for tasks due within 24 h",
+      "ok": true,
+      "ms": 939
+    },
+    {
+      "name": "Security: reload requires the password; wrong password rejected; data persists",
+      "ok": true,
+      "ms": 859
+    },
+    {
+      "name": "Security: deep link while locked returns to that screen after unlocking",
+      "ok": true,
+      "ms": 291
+    },
+    {
+      "name": "PWA: service worker active, manifest valid, app works fully offline",
+      "ok": true,
+      "ms": 497
+    },
+    {
+      "name": "Responsive: small phone, landscape, tablet layouts have no horizontal overflow",
+      "ok": true,
+      "ms": 2213
+    },
+    {
+      "name": "Security: user input is escaped (XSS attempt is shown as text, not run)",
+      "ok": true,
+      "ms": 88
+    },
+    {
+      "name": "Performance: load size and timings",
+      "ok": true,
+      "ms": 167
+    },
+    {
+      "name": "No JavaScript errors in the console during the whole run",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "metrics": {
+    "firstLoadMs": 255,
+    "signupEncryptMs": 168,
+    "photoKB": 37,
+    "notifications": [
+      "Read: research ethics chapter",
+      "Fix GPS permission-denied bug"
+    ],
+    "unlockMs": 129,
+    "dcl": 52,
+    "load": 52,
+    "fcp": 56,
+    "requests": 14,
+    "appShellKB": 204
+  },
+  "audits": [
+    {
+      "label": "Welcome",
+      "interactive": 3,
+      "belowTouch40": 0,
+      "textChecked": 13,
+      "worstContrast": 6.26,
+      "worstText": "I already have an account – si",
+      "issues": []
+    },
+    {
+      "label": "Sign-up",
+      "interactive": 9,
+      "belowTouch40": 0,
+      "textChecked": 14,
+      "worstContrast": 6.03,
+      "worstText": "That password is too common.",
+      "issues": []
+    },
+    {
+      "label": "Today",
+      "interactive": 21,
+      "belowTouch40": 3,
+      "textChecked": 48,
+      "worstContrast": 4.86,
+      "worstText": "Medium",
+      "issues": []
+    },
+    {
+      "label": "Tasks",
+      "interactive": 26,
+      "belowTouch40": 0,
+      "textChecked": 31,
+      "worstContrast": 4.86,
+      "worstText": "Medium",
+      "issues": []
+    },
+    {
+      "label": "Task form",
+      "interactive": 12,
+      "belowTouch40": 0,
+      "textChecked": 14,
+      "worstContrast": 6.09,
+      "worstText": "Medium",
+      "issues": []
+    },
+    {
+      "label": "Task detail",
+      "interactive": 23,
+      "belowTouch40": 4,
+      "textChecked": 22,
+      "worstContrast": 5.55,
+      "worstText": "High priority",
+      "issues": []
+    },
+    {
+      "label": "Week",
+      "interactive": 23,
+      "belowTouch40": 0,
+      "textChecked": 64,
+      "worstContrast": 4.86,
+      "worstText": "Medium",
+      "issues": []
+    },
+    {
+      "label": "Focus",
+      "interactive": 11,
+      "belowTouch40": 0,
+      "textChecked": 8,
+      "worstContrast": 6.49,
+      "worstText": "25 min today · 1 session",
+      "issues": []
+    },
+    {
+      "label": "More",
+      "interactive": 25,
+      "belowTouch40": 0,
+      "textChecked": 45,
+      "worstContrast": 6.49,
+      "worstText": "Study",
+      "issues": []
+    },
+    {
+      "label": "Today (130% text + high contrast)",
+      "interactive": 20,
+      "belowTouch40": 0,
+      "textChecked": 46,
+      "worstContrast": 8.12,
+      "worstText": "Medium",
+      "issues": []
+    },
+    {
+      "label": "Today (dark)",
+      "interactive": 20,
+      "belowTouch40": 2,
+      "textChecked": 46,
+      "worstContrast": 6.5,
+      "worstText": "High",
+      "issues": []
+    },
+    {
+      "label": "Module form",
+      "interactive": 17,
+      "belowTouch40": 0,
+      "textChecked": 8,
+      "worstContrast": 6.49,
+      "worstText": "e.g. CS52001",
+      "issues": []
+    },
+    {
+      "label": "Modules",
+      "interactive": 18,
+      "belowTouch40": 2,
+      "textChecked": 36,
+      "worstContrast": 6.26,
+      "worstText": "Add module",
+      "issues": []
+    },
+    {
+      "label": "Import calendar",
+      "interactive": 8,
+      "belowTouch40": 0,
+      "textChecked": 24,
+      "worstContrast": 6.83,
+      "worstText": "Choose .ics file",
+      "issues": []
+    },
+    {
+      "label": "Import preview",
+      "interactive": 12,
+      "belowTouch40": 0,
+      "textChecked": 19,
+      "worstContrast": 4.86,
+      "worstText": "Medium",
+      "issues": []
+    },
+    {
+      "label": "Unlock",
+      "interactive": 4,
+      "belowTouch40": 0,
+      "textChecked": 7,
+      "worstContrast": 6.26,
+      "worstText": "Forgot your password?",
+      "issues": []
+    }
+  ],
+  "consoleErrors": []
+}
